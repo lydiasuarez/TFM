@@ -1,0 +1,98 @@
+---
+title: "ACP método variationcoefficient"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+```{r, include=FALSE}
+library("PropertiesDatasets")
+```
+
+# Pretratado
+
+```{r, include=FALSE}
+# Cargamos los datasets que vamos a analizar
+CellTypes <- getCellTypesInDataSet("Zheisel")
+# Utilizamos una de las funciones de mi paquete que nos devuelve una matriz con un tipo de célula y todas las regiones cerebrales asociadas
+for (cell in CellTypes) {
+  assign(cell,getGenesInCellType("Zheisel",cell,"variationcoefficient",NA))
+}
+
+# Creamos una función para eliminar las columnas que no queremos de nuestras matrices. Además, utilizamos la columna "BrainRegion" para los rownames.
+correctDataset <- function(name){
+  rownames(name) <- name$BrainRegion
+  name$BrainRegion <- NULL
+  name$CellType <- NULL
+  name$Methods <- NULL
+  return(name)
+}
+
+# Creamos una función para realizar la traspuesta a nuestros datasets, colocando los genes en las filas y las regiones en las columnas.
+traspuesta <- function(celltyp){
+  t(celltyp)
+}
+```
+
+# Hacemos los ACP para todas las matrices
+
+```{r , include=FALSE}
+contador = 0
+lista_new_matriz <- list()
+for (cell in CellTypes){
+  contador = contador + 1
+  lista_new_matriz[[contador]] <- paste0(cell,".ACP")
+  celula = get(cell)
+  new_matriz <-  correctDataset(celula)
+  cols <- sapply(new_matriz, is.logical)
+  new_matriz[,cols] <- lapply(new_matriz[,cols], as.numeric)
+  assign(paste0(cell,".ACP"), prcomp(new_matriz, center = T))
+  summary(lista_new_matriz[contador])
+  remove(new_matriz)
+  cat("fin",cell,"\n")
+}
+remove(celula, cell, cols, contador)
+
+```
+
+
+# Representamos todos los ACP agrupados por tipos celulares
+
+```{r echo=FALSE}
+for (ACP in lista_new_matriz){
+  obje <- get(ACP)
+  cat("ACP for ", ACP,"\n")
+  VE <- obje$sdev^2
+  PVE <- VE / sum(VE)
+  cat("Proportion of Variance Explained", "\n")
+  print(round(PVE, 2))
+  if (length(obje$rotation[1,]) > 10)
+  {a = c(1,10)} else {a= c(1,length(obje$rotation[1,]))}
+  p <- fviz_eig(obje,
+              addlabels = T, 
+              barcolor = "#974ceb", 
+              barfill = "#b179f0", 
+              linecolor = "#63182b",
+              choice = "variance", 
+              ylim=c(0,100),
+              xlim = a,
+              main = paste0("ScreePlot - ",ACP))
+
+  df <- data.frame(x=1:length(PVE),
+                 y=cumsum(PVE)*100/4)
+  p <- p + 
+  geom_point(data=df, aes(x, y), size=2, color="#63182b") +
+  geom_line(data=df, aes(x, y), color="#63182b") +
+  scale_y_continuous(sec.axis = sec_axis(~ . * 4, 
+                                         name = "Cumulative proportion of Variance Explained") )
+  print(p)
+  cat("\n")
+  print(summary(obje))
+  ACP = gsub(".ACP","",ACP)
+  print(fviz_ACP_ind(obje,
+                     col.ind = "cos2",
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                     repel = TRUE, title = paste0("ACP ", ACP, " - variationcoefficient")))
+
+}
+```

@@ -1,0 +1,61 @@
+---
+title: "Obtención de posibles genes marcadores"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(caret)
+brainregions = c("amygdala","cortex2","hippocampus","hypothalamus","midbrainventral","midbraindorsal","olfactory","spinalcord","striatumventral","thalamus")
+celltypes = c("Astrocytes","Immune","Neurons","Oligos")
+
+```
+
+```{r echo=FALSE}
+for (region in brainregions){
+  for (cell in celltypes){
+    cat("\n",region, "----", cell,"\n")
+    cat("\n")
+    model.train = readRDS(paste0("./",region,"/",cell,"/",region,".",cell,".train.fit.rds"))
+    data.test = readRDS(paste0("./",region,"/",cell,"/",region,".",cell,".data.test.rds"))
+    datos_test = as.factor(data.test$brainregion)
+    rf.predict.test <- predict(model.train,data.test)
+    conf.matrix.rf.test <- confusionMatrix(rf.predict.test,datos_test)
+    importancia = varImp(model.train)
+    print(importancia)
+    print(plot(importancia))
+  }
+}
+```
+
+
+```{r}
+for (cell in celltypes){
+  for (region in brainregions){
+    cat("\n", cell,"\n")
+    cat("\n")
+    model.train = readRDS(paste0("./",region,"/",cell,"/",region,".",cell,".train.fit.rds"))
+    variables_imp = varImp(model.train)
+    all_genes_importance = variables_imp$importance
+    results = all_genes_importance %>%
+      rownames_to_column() %>%
+      filter(Overall > 20)
+    results = results[order(results$Overall, decreasing = T),]
+    results[,1] = toupper(results[,1])
+    colnames(results)[1] <- "GeneSymbols"
+    rm(model.train,variables_imp,all_genes_importance)
+    assign(paste0("ImportantGenes_",cell,"_",region),results)
+    rm(results)
+  }
+}
+
+```
+
+```{r}
+
+```
+
+
+
+

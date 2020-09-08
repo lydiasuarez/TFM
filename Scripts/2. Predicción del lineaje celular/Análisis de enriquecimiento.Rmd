@@ -1,0 +1,50 @@
+---
+title: "Análisis de enriquecimiento"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+```{r , include=FALSE}
+library(caret)
+library(tidyverse)
+library(clusterProfiler)
+library(org.Mm.eg.db)
+brainregions = c("cortex1","cortex2","cortex3")
+celltypes = c("Neurons","Astrocytes","Immune","Oligos")
+```
+
+
+# Plots para aquellos genes con importancia mayor de 1.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+for (cell in celltypes){
+  cat("DotPlot para", cell,"\n")
+  cat("\n")
+  model.train = readRDS(paste0("./",cell,"/zheisel.",cell,".fit.rds"))
+  variables_imp = varImp(model.train)
+  all_genes_importance = variables_imp$importance
+  results = all_genes_importance %>%
+    rownames_to_column() %>%
+    filter(Overall > 1)
+  results = results[order(results$Overall, decreasing = T),]
+  colnames(results)[1] <- "GeneSymbols"
+  rm(model.train,variables_imp,all_genes_importance)
+  gene_symbols = toupper(results$GeneSymbols)
+  gene_id <- clusterProfiler::bitr(gene_symbols,fromType ="SYMBOL", toType = c("ENSEMBL","ENTREZID","GENENAME"), OrgDb="org.Hs.eg.db")
+  enrichAnalisis <- enrichGO(gene         = gene_id$ENSEMBL,
+                             OrgDb         = org.Hs.eg.db,
+                             keyType       = 'ENSEMBL',
+                             ont           = "BP",
+                             pAdjustMethod = "BH",
+                             pvalueCutoff  = 0.01,
+                             qvalueCutoff  = 0.05)
+  assign(paste0("genes_over1_",cell),results)
+  assign(paste0("genes_id_",cell),gene_id)
+  assign(paste0("enrich_analisis_",cell),enrichAnalisis)
+  rm(results,gene_id)
+  print(dotplot(enrichAnalisis, showCategory=15, title = cell))
+  cat("\n")
+}
+
+```
+

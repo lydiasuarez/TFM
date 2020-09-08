@@ -1,0 +1,69 @@
+---
+title: "Análisis de eficacia"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library("caret")
+setwd("E:/TFM/3. randomforest")
+```
+
+
+```{r include=FALSE}
+zheisel.modelo.astrocytes.fit = readRDS("./Astrocytes/zheisel.astrocytes.fit.rds")
+data.test.astrocytes = readRDS("./Astrocytes/data.test.rds")
+zheisel.modelo.immune.fit = readRDS("./Immune/zheisel.immune.fit.rds")
+data.test.immune = readRDS("./Immune/data.test.rds")
+zheisel.modelo.neurons.fit = readRDS("./Neurons/zheisel.neurons.fit.rds")
+data.test.neurons = readRDS("./Neurons/data.test.rds")
+zheisel.modelo.oligos.fit = readRDS("./Oligos/zheisel.oligos.fit.rds")
+data.test.oligos = readRDS("./Oligos/data.test.rds")
+```
+
+# Astrocytes 
+
+```{r echo=FALSE}
+matrixconfusion_astrocytes <- confusionMatrix(zheisel.modelo.astrocytes.fit)
+rf.predict.test_astrocytes <- predict(zheisel.modelo.astrocytes.fit,data.test.astrocytes)
+datos_test_factor_astrocytes = as.factor(data.test.astrocytes$BrainRegion)
+conf.matrix.rf.test.astrocytes <- confusionMatrix(rf.predict.test_astrocytes,datos_test_factor_astrocytes)
+conf.matrix.rf.test.astrocytes
+
+```
+
+
+# Immune
+
+```{r echo=FALSE}
+matrixconfusion_immune <- confusionMatrix(zheisel.modelo.immune.fit)
+rf.predict.test_immune <- predict(zheisel.modelo.immune.fit,data.test.immune)
+datos_test_factor_immune = as.factor(data.test.immune$BrainRegion)
+conf.matrix.rf.test.immune <- confusionMatrix(rf.predict.test_immune,datos_test_factor_immune)
+conf.matrix.rf.test.immune
+
+```
+
+# Neurons
+
+```{r echo=FALSE}
+matrixconfusion_neurons <- confusionMatrix(zheisel.modelo.neurons.fit)
+rf.predict.test_neurons <- predict(zheisel.modelo.neurons.fit,data.test.neurons)
+datos_test_factor_neurons = as.factor(data.test.neurons$BrainRegion)
+conf.matrix.rf.test.neurons <- confusionMatrix(rf.predict.test_neurons,datos_test_factor_neurons)
+conf.matrix.rf.test.neurons
+
+```
+
+
+# Oligos
+
+```{r echo=FALSE}
+matrixconfusion_oligos <- confusionMatrix(zheisel.modelo.oligos.fit)
+rf.predict.test_oligos <- predict(zheisel.modelo.oligos.fit,data.test.oligos)
+datos_test_factor_oligos = as.factor(data.test.oligos$BrainRegion)
+conf.matrix.rf.test.oligos <- confusionMatrix(rf.predict.test_oligos,datos_test_factor_oligos)
+conf.matrix.rf.test.oligos
+
+```

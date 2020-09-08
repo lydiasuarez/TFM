@@ -1,0 +1,82 @@
+---
+title: "Matrices para los modelos de clasificación"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+#Library 
+
+```{r}
+library("devtools")
+library("hdf5r")
+library("loomR")
+library("caret")
+
+```
+
+
+#Functions and variables
+```{r}
+getJoinTranscriptomicDataInCelltypeInBrainRegion <- function(target,brainregions,mypath){
+  
+  
+  #Connect downloaded files to environment
+  
+  for (lfile in brainregions){
+    i = paste0(lfile,".loom")
+    assign(lfile, loomR::connect(filename = paste0(mypath,i), mode = "r+"))
+  }
+  for (i in brainregions){
+    br= get(i)
+    matrix= br$matrix[,] # Create the matrix
+    colnames(matrix) = br$row.attrs$Gene[]
+    rownames(matrix) = br$col.attrs$CellID[]
+    tgtmatrix = matrix[br$col.attrs$Class[] == target,]
+    row_unique = unique(rownames(tgtmatrix)) # Delete duplicated
+    tgtmatrix = tgtmatrix[row_unique,]
+    assign(paste0("matrix_",i,"_",target),tgtmatrix)
+    rm(matrix,row_unique,tgtmatrix) # Remove useless variables 
+  }
+  a= paste0("matrix_cortex1_",target)
+  b= paste0("matrix_cortex2_",target)
+  c= paste0("matrix_cortex3_",target)
+  list_br = c(a,b,c)
+  col_a = colnames(get(a))
+  b = get(b)[,col_a]
+  c = get(c)[,col_a]
+  allmatrix = rbind(get(a),b,a)
+  genes_10 = (colSums(allmatrix > 0) > (0.1 * nrow(allmatrix)))
+  allmatrix= allmatrix[,genes_10]
+  all_dataframe = as.data.frame(allmatrix) # Convert to Data Frame
+  all_dataframe$BrainRegion = NA # Create Brain Region column
+
+  # Add BrainRegion Column
+  for (matrix_brain in list_br){
+    region = gsub("matrix_","",matrix_brain)
+    cat(region)
+    region = gsub(paste0("_",target),"",region)# Get brain region name
+    cat(region)
+    matrix = get(matrix_brain) # Access to object
+    cat(region,"\n") # Check
+    rows_brain = rownames(matrix) # Get matrix row names in a variable
+    for (row_brain in rows_brain) {
+      all_dataframe[row_brain,"BrainRegion"] <- region # Add brain region name to column
+    }
+  }
+   return(all_dataframe)
+}
+```
+
+
+```{r}
+mypath= "./tissues_RF2/"
+celltypes = c("Neurons")
+brainregions = c("cortex1","cortex2","cortex3")
+for (type in celltypes){
+  all_dataframe = getJoinTranscriptomicDataInCelltypeInBrainRegion(type,brainregions,mypath)
+  saveRDS(all_dataframe, file = paste0("all_dataframe_",type,".rds"))
+  rm(nombre)
+}
+
+```

@@ -1,0 +1,102 @@
+---
+title: "ACP método rawexpression"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+```{r, include=FALSE}
+library("PropertiesDatasets")
+
+```
+
+# Pretratado
+
+```{r, include=FALSE}
+
+#CellTypes <- getCellTypesInDataSet("Zheisel") # Obtenemos los nombres de todos los Cell Types 
+CellTypes <- getCellTypesInDataSet("Zheisel")
+visibility <- c(5,10,20,30,40,50) # Determinamos las visibilidades
+
+
+correctDataset <- function(name){  # Creamos una función para eliminar las columnas que no queremos de nuestras matrices. Además, utilizamos la columna "BrainRegion" para los rownames.
+  rownames(name) <- name$BrainRegion
+  name$BrainRegion <- NULL
+  name$CellType <- NULL
+  name$Methods <- NULL
+  return(name)
+}
+
+```
+
+
+
+# Hacemos los ACP para todas las matrices
+
+```{r echo=FALSE}
+contador = 0
+lista_new_matriz <- list()
+for (cell in CellTypes) {
+  for (v in visibility){
+    contador = contador + 1
+    lista_new_matriz[[contador]] <- paste0(cell,"_",v,".ACP") # Añadimos el nombre de los ACP a una lista
+    matriz_genes = getGenesInCellType("Zheisel",cell,"rawexpression",v) # Obtenemos una matriz con los genes activos para cada CellType y visibilidad
+    brain_regions = matriz_genes$BrainRegion[]
+    new_matriz <-  correctDataset(matriz_genes) # Corregimos el dataset
+    cols <- sapply(new_matriz, is.logical) # Obtenemos el nombre de las columnas con valores logical
+    new_matriz[,cols] <- lapply(new_matriz[,cols], as.numeric) # Convertimos los valores TRUE/FALSE en 1/0
+    assign(paste0(cell,"_",v,".ACP"), prcomp(new_matriz, center = T)) # Hacemos el ACP
+    remove(new_matriz,matriz_genes,cols) # Eliminamos la matriz
+    
+  }
+}
+remove(cell,contador)
+```
+
+# Representamos todos los ACP agrupados por tipos celulares
+
+```{r echo=FALSE}
+contador = 1
+getwd()
+for(i in seq(from=6, to=54, by=6)){
+  names = lista_new_matriz[contador:i] # Escoge los nombres de 5 en 5
+  ACP = gsub("_5.ACP","",lista_new_matriz[contador])
+  cat("ACP for", ACP)
+  for (ACP_sum in names){
+    obje <- get(ACP_sum) # Accedemos al objeto
+    VE <- obje$sdev^2 # Calculamos la varianza explicada
+    PVE <- VE / sum(VE) # Calculamos la proporción de varianza explicada (PVE)
+    #print(round(PVE, 2))
+      if (length(obje$rotation[1,]) > 10)
+        {a = c(1,10)} else {a= c(1,length(obje$rotation[1,]))}
+      p <- fviz_eig(obje, 
+                  addlabels = T, 
+                  barcolor = "#974ceb", 
+                  barfill = "#b179f0", 
+                  linecolor = "#63182b",
+                  choice = "variance", 
+                  ylim=c(0,100),
+                  xlim = a,
+                  main = paste0("ScreePlot - ",ACP_sum))
+    
+      df <- data.frame(x=1:length(PVE),
+                     y=cumsum(PVE)*100/4)
+      p <- p + 
+      geom_point(data=df, aes(x, y), size=2, color="#63182b") +geom_line(data=df, aes(x, y), color="#63182b") +
+      scale_y_continuous(sec.axis = sec_axis(~ . * 4, name = "Cumulative proportion of Variance Explained") )
+      plot(p) # Representamos la PVE a través del ScreePlot
+  }
+  for (ACP_sum in names){
+    obje <- get(ACP_sum)
+    visibilidad = gsub(paste0(ACP,"_"),"",ACP_sum)
+    visibilidad = gsub(".ACP","",visibilidad)
+    plot(fviz_ACP_ind(obje,
+                     col.ind = "cos2",
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+                     repel = TRUE, title = paste0("ACP ", ACP, " con visibilidad ", visibilidad," - rawexpression"))) # Representamos el ACP
+    
+  }
+  contador= contador + 6
+}
+
+```

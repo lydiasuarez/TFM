@@ -1,0 +1,119 @@
+---
+title: "Matrices para todas las regiones y tipos celulares"
+author: "lydia.suarez97@gmail.com"
+date: "08/9/2020"
+output: html_document
+---
+
+
+```{r , include=FALSE}
+library("loomR")
+setwd("E:/TFM/4. genes _criticos")
+```
+
+```{r include=FALSE}
+brainregions = c("amygdala","cortex2","hippocampus","hypothalamus","midbrainventral","midbraindorsal","olfactory","spinalcord","striatumventral","thalamus")
+celltypes = c("Immune","Neurons","Oligos")
+```
+
+```{r include=FALSE}
+mypath ="../tissues2/"
+for (lfile in brainregions){
+  i = paste0(lfile,".loom")
+  assign(lfile, loomR::connect(filename = paste0(mypath,i), mode = "r+"))
+}
+```
+
+```{r}
+getDatasetAllBrainRegionInCellType <- function(celltypes,brainregions){
+  cols = readRDS("./cols.rds")
+  for (cell in celltypes){
+    cat("Empezando con ",cell,"\n")
+    dataset_allregions = matrix(data= NA, nrow=0, ncol = 27998)
+    colnames(dataset_allregions) <- cols
+    dataset_allregions = cbind(dataset_allregions,brainregion = NA)
+    for (i in brainregions){
+      cat("Añadiendo ",i, "\n")
+      region = get(i)
+      matrix= region$matrix[,] 
+      colnames(matrix) = region$row.attrs$Gene[]
+      rownames(matrix) = region$col.attrs$CellID[]
+      matrix = matrix[region$col.attrs$Class[] == cell,]
+      length_cells = length(rownames(matrix))
+      if (length_cells < 999){
+        matrix = matrix[1:length_cells,]
+      } else {matrix = matrix[1:1000,]}
+      row_region = rownames(matrix)
+      dataset_allregions = rbind(dataset_allregions,matrix)
+      rm(matrix)
+      saveRDS(col_region, file = paste0("./col_",i,"_",cell,".rds"))
+    }
+    saveRDS(dataset_allregions, file = paste0(cell,"_dataset_allbrainregions.rds"))
+    rm(dataset_allregions,length_cells,region)
+    cat(cell," finalizado","\n")
+  }
+}
+```
+
+```{r}
+getDatasetAllBrainRegionInCellType(celltypes,brainregions)
+```
+
+
+```{r}
+for (region in brainregions){
+  cat("Empieza: ",region, "\n")
+  dir.create(paste0("./",region))
+  for (cell in celltypes){
+    cat("   ",cell,"\n")
+    dir.create(paste0("./",region,"/",cell))
+    bigdataset = readRDS(paste0("./",cell,"_dataset_allbrainregions.rds"))
+    df_other_regions = bigdataset[bigdataset[,"brainregion"] != region,] # other regions
+    df_current_region = bigdataset[bigdataset[,"brainregion"] == region,] # current region
+    rm(bigdataset)
+    df_other_regions[,"brainregion"] <- "another.region" # rename column Brain region with "another.region"
+    df_other_regions = df_other_regions[sample(nrow(df_other_regions),1000),] # select 1000 random rows
+    dataset.rf = rbind(df_current_region,df_other_regions) # Bind both matrix
+    saveRDS(dataset.rf, file = paste0("./",region,"/",cell,"/",region,".",cell,".dataset.rf.rds"))
+    rm(df_current_region,df_other_regions,dataset.rf)
+  }
+}
+```
+
+
+```{r}
+brainregions = c("amygdala","cortex2","hippocampus","hypothalamus","midbrainventral","midbraindorsal","olfactory","spinalcord","striatumventral","thalamus")
+celltypes = c("Astrocytes","Immune","Neurons","Oligos")
+for (region in brainregions){
+  cat("Empieza:",region, "\n")
+  dir.create(paste0("./",region))
+  for (cell in celltypes){
+    cat("   ",cell,"\n")
+    dir.create(paste0("./",region,"/",cell))
+    bigdataset = readRDS(paste0("./",cell,"_dataset_allbrainregions.rds"))
+    all_rows = rownames(bigdataset)
+    current_rows = readRDS(paste0("./rows/col_",region,"_",cell,".rds"))
+    other_rows = setdiff(all_rows,current_rows)
+    df_current_region = bigdataset[current_rows,] # current region
+    df_other_regions = bigdataset[other_rows,] # other regions
+    rm(bigdataset)
+    df_other_regions = df_other_regions[sample(nrow(df_other_regions),1000),] # select 1000 random rows
+    dataset.rf = rbind(df_current_region,df_other_regions) # Bind both matrix
+    genes_10 = (colSums(dataset.rf > 0) > (0.1 * nrow(dataset.rf)))
+    dataset.rf= dataset.rf[,genes_10]
+    dataframe.rf = as.data.frame(dataset.rf)
+    dataframe.rf$brainregion <- "another.region"
+    for (row_c in current_rows){
+      dataframe.rf[row_c,"brainregion"] <- region
+    }
+    saveRDS(dataframe.rf, file = paste0("./",region,"/",cell,"/",region,".",cell,".dataset.rf.rds"))
+    rm(df_current_region,df_other_regions,dataset.rf,dataframe.rf)
+  }
+  cat("\n")
+}
+
+```
+
+
+
+
