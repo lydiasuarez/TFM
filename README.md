@@ -1,10 +1,10 @@
 # Final Master Project - Lydia Suárez López
 
-In this repository, you will find all the scripts developed yo carry out this projects as well as some of the results obteined.  
+In this repository, you will find all the scripts developed you carry out this projects as well as some of the results obteined.  
 
 In the SCRIPTS folder you will find three subfolders associated with the three parts developed in this project. Inside these folders are finally the scripts. 
 
-In the RESULTS folder there are tables with the results of the genes founs in each brain region and cell type. In each table, each gene is associated with the level of importance it obtained in the clasification model.
+In the RESULTS folder there are tables with the results of the genes founds in each brain region and cell type. In each table, each gene is associated with the level of importance obtained in the classification model.
 
 ---------------------------------------------
 
